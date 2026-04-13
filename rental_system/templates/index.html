@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Rental System</title>
+</head>
+<body>
+
+<h1>🏠 Smart Rental Dashboard</h1>
+
+<div id="dashboard"></div>
+
+<h2>🤖 Chatbot</h2>
+<input type="text" id="msg" placeholder="Ask something..." />
+<button onclick="sendMsg()">Send</button>
+
+<div id="chat"></div>
+
+<script>
+async function loadDashboard() {
+    const res = await fetch("/dashboard/");
+    const data = await res.json();
+
+    document.getElementById("dashboard").innerHTML =
+        `Income: ${data.income} | Expense: ${data.expense}`;
+}
+
+async function sendMsg() {
+    const msg = document.getElementById("msg").value;
+
+    const res = await fetch("http://localhost:5000/chat", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({ message: msg })
+    });
+
+    const data = await res.json();
+
+    document.getElementById("chat").innerHTML +=
+        `<p><b>You:</b> ${msg}</p>
+         <p><b>Bot:</b> ${data.reply}</p>`;
+}
+
+loadDashboard();
+</script>
+
+</body>
+</html>
