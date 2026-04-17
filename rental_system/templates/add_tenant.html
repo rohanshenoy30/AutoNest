@@ -1,0 +1,19 @@
+{% load static %}
+<link rel="stylesheet" href="{% static 'css/style.css' %}">
+
+<h2>Add Tenant</h2>
+
+<form method="POST">
+{% csrf_token %}
+
+<input name="name" placeholder="Name">
+<input name="phone" placeholder="Phone">
+
+<select name="property">
+{% for p in properties %}
+<option value="{{ p.id }}">{{ p.name }}</option>
+{% endfor %}
+</select>
+
+<button>Add Tenant</button>
+</form>

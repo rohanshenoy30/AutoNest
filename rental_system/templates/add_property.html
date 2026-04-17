@@ -1,0 +1,11 @@
+{% load static %}
+<link rel="stylesheet" href="{% static 'css/style.css' %}">
+
+<h2>Add Property</h2>
+
+<form method="POST">
+{% csrf_token %}
+<input name="name" placeholder="Property Name">
+<input name="address" placeholder="Address">
+<button>Add Property</button>
+</form>

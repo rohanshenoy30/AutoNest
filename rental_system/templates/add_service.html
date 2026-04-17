@@ -1,0 +1,20 @@
+{% load static %}
+<link rel="stylesheet" href="{% static 'css/style.css' %}">
+
+<h2>Add Service</h2>
+
+<form method="POST">
+{% csrf_token %}
+
+<select name="property">
+{% for p in properties %}
+<option value="{{ p.id }}">{{ p.name }}</option>
+{% endfor %}
+</select>
+
+<input name="service_type" placeholder="Service Type">
+<input type="number" name="cost" placeholder="Cost">
+<input type="date" name="date">
+
+<button>Add Service</button>
+</form>

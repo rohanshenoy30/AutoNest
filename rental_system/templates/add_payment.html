@@ -1,0 +1,24 @@
+{% load static %}
+<link rel="stylesheet" href="{% static 'css/style.css' %}">
+
+<h2>Add Payment</h2>
+
+<form method="POST">
+{% csrf_token %}
+
+<select name="tenant">
+{% for t in tenants %}
+<option value="{{ t.id }}">{{ t.name }}</option>
+{% endfor %}
+</select>
+
+<input type="number" name="amount" placeholder="Amount">
+<input type="date" name="date">
+
+<select name="status">
+<option>Paid</option>
+<option>Pending</option>
+</select>
+
+<button>Add Payment</button>
+</form>

@@ -1,47 +1,81 @@
+{% load static %}
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Rental System</title>
+    <title>Dashboard</title>
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
 </head>
+
 <body>
 
-<h1>🏠 Smart Rental Dashboard</h1>
+<header>🏠 Smart Rental Management</header>
 
-<div id="dashboard"></div>
+<div class="container">
 
-<h2>🤖 Chatbot</h2>
-<input type="text" id="msg" placeholder="Ask something..." />
-<button onclick="sendMsg()">Send</button>
+<div class="nav">
+    <a href="/add-property/">Add Property</a>
+    <a href="/add-tenant/">Add Tenant</a>
+    <a href="/add-payment/">Add Payment</a>
+    <a href="/add-expense/">Add Expense</a>
+    <a href="/add-service/">Add Service</a>
+</div>
 
-<div id="chat"></div>
+<div class="card">
+<h2>🏢 Properties</h2>
+<ul>
+{% for p in properties %}
+<li>{{ p.name }} - {{ p.address }}</li>
+{% empty %}
+<li>No properties yet</li>
+{% endfor %}
+</ul>
+</div>
 
-<script>
-async function loadDashboard() {
-    const res = await fetch("/dashboard/");
-    const data = await res.json();
+<div class="card">
+<h2>👤 Tenants</h2>
+<ul>
+{% for t in tenants %}
+<li>{{ t.name }} ({{ t.property.name }})</li>
+{% empty %}
+<li>No tenants yet</li>
+{% endfor %}
+</ul>
+</div>
 
-    document.getElementById("dashboard").innerHTML =
-        `Income: ${data.income} | Expense: ${data.expense}`;
-}
+<div class="card">
+<h2>💰 Payments</h2>
+<ul>
+{% for pay in payments %}
+<li>{{ pay.tenant.name }} - ₹{{ pay.amount }} - {{ pay.status }}</li>
+{% empty %}
+<li>No payments yet</li>
+{% endfor %}
+</ul>
+</div>
 
-async function sendMsg() {
-    const msg = document.getElementById("msg").value;
+<div class="card">
+<h2>📉 Expenses</h2>
+<ul>
+{% for e in expenses %}
+<li>{{ e.property.name }} - {{ e.type }} - ₹{{ e.amount }}</li>
+{% empty %}
+<li>No expenses yet</li>
+{% endfor %}
+</ul>
+</div>
 
-    const res = await fetch("http://localhost:5000/chat", {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({ message: msg })
-    });
+<div class="card">
+<h2>🛠 Services</h2>
+<ul>
+{% for s in services %}
+<li>{{ s.property.name }} - {{ s.service_type }} - ₹{{ s.cost }}</li>
+{% empty %}
+<li>No services yet</li>
+{% endfor %}
+</ul>
+</div>
 
-    const data = await res.json();
-
-    document.getElementById("chat").innerHTML +=
-        `<p><b>You:</b> ${msg}</p>
-         <p><b>Bot:</b> ${data.reply}</p>`;
-}
-
-loadDashboard();
-</script>
+</div>
 
 </body>
 </html>
