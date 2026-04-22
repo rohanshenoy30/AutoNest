@@ -8,16 +8,25 @@
 
 <body>
 
-<header>🏠 Smart Rental Management</header>
+<header>🏠 Smart Rental Management
+{% if user.is_authenticated %}
+    - Welcome, {{ user.username }}!
+{% endif %}
+</header>
 
 <div class="container">
 
 <div class="nav">
+    {% if user.is_authenticated %}
     <a href="/add-property/">Add Property</a>
     <a href="/add-tenant/">Add Tenant</a>
     <a href="/add-payment/">Add Payment</a>
     <a href="/add-expense/">Add Expense</a>
     <a href="/add-service/">Add Service</a>
+    <a href="{% url 'account_logout' %}">Logout</a>
+    {% else %}
+    <a href="{% url 'account_login' %}">Login</a>
+    {% endif %}
 </div>
 
 <div class="card">

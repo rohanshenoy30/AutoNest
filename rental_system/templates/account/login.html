@@ -1,0 +1,128 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Login</title>
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    <style>
+        .auth-container {
+            max-width: 400px;
+            margin: 30px auto;
+        }
+        .auth-card {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .auth-card h2 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 20px;
+        }
+        .auth-card form {
+            width: 100%;
+            margin: 0;
+            padding: 0;
+            background: transparent;
+        }
+        .auth-card input {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        .auth-card button {
+            width: 100%;
+            background: green;
+            color: white;
+            padding: 10px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 10px;
+        }
+        .auth-card button:hover {
+            background: darkgreen;
+        }
+        .auth-links {
+            text-align: center;
+            margin-top: 15px;
+        }
+        .auth-links a {
+            color: #3498db;
+            text-decoration: none;
+            margin: 0 10px;
+        }
+        .auth-links a:hover {
+            text-decoration: underline;
+        }
+        .errorlist {
+            color: red;
+            list-style: none;
+            padding: 0;
+        }
+    </style>
+</head>
+
+<body>
+
+<header>🏠 Smart Rental Management</header>
+
+<div class="container">
+    <div class="auth-container">
+        <div class="auth-card">
+            <h2>Login</h2>
+
+            {% if form.non_field_errors %}
+                <div class="error-message">
+                    {% for error in form.non_field_errors %}
+                        <p>{{ error }}</p>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            <form method="post">
+                {% csrf_token %}
+                
+                <label for="id_login">Email or Username:</label>
+                {{ form.login }}
+                {% if form.login.errors %}
+                    <ul class="errorlist">
+                        {% for error in form.login.errors %}
+                            <li>{{ error }}</li>
+                        {% endfor %}
+                    </ul>
+                {% endif %}
+
+                <label for="id_password">Password:</label>
+                {{ form.password }}
+                {% if form.password.errors %}
+                    <ul class="errorlist">
+                        {% for error in form.password.errors %}
+                            <li>{{ error }}</li>
+                        {% endfor %}
+                    </ul>
+                {% endif %}
+
+                {% if form.remember %}
+                    <label for="id_remember">
+                        Remember Me {{ form.remember }}
+                    </label>
+                {% endif %}
+
+                <button type="submit">Sign In</button>
+            </form>
+
+            <div class="auth-links">
+                <p>Don't have an account? <a href="{% url 'account_signup' %}">Sign Up</a></p>
+            </div>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>

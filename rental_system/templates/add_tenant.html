@@ -3,13 +3,20 @@
 
 <h2>Add Tenant</h2>
 
+<a href="/">Back to Dashboard</a>
+
+{% if error %}
+<p style="color: red;">{{ error }}</p>
+{% endif %}
+
 <form method="POST">
 {% csrf_token %}
 
-<input name="name" placeholder="Name">
-<input name="phone" placeholder="Phone">
+<input name="name" placeholder="Name" required>
+<input name="phone" placeholder="Phone" required>
 
-<select name="property">
+<select name="property" required>
+<option value="">Select Property</option>
 {% for p in properties %}
 <option value="{{ p.id }}">{{ p.name }}</option>
 {% endfor %}
