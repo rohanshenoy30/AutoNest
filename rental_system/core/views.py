@@ -20,12 +20,21 @@ def home(request):
     owner_properties = Property.objects.filter(user=request.user)
     owner_tenants = Tenant.objects.filter(user=request.user).select_related("property", "tenant_user")
     owner_maintenance_requests = MaintenanceRequest.objects.filter(owner=request.user).select_related("tenant", "property")
+    approved_maintenance_requests = owner_maintenance_requests.filter(
+        status=MaintenanceRequest.STATUS_APPROVED
+    )
     owner_rent_demands = RentChangeDemand.objects.filter(owner=request.user).select_related("tenant", "property")
 
     tenant_records = Tenant.objects.filter(tenant_user=request.user).select_related("property", "user")
     tenant_ids = tenant_records.values_list("id", flat=True)
 
-    tenant_maintenance_requests = MaintenanceRequest.objects.filter(tenant_id__in=tenant_ids).select_related("property")
+    # Keep all request outcomes visible to tenants (including approved ones)
+    tenant_maintenance_requests = (
+        MaintenanceRequest.objects
+        .filter(tenant_id__in=tenant_ids)
+        .select_related("property")
+        .order_by("-created_at")
+    )
     tenant_rent_demands = RentChangeDemand.objects.filter(tenant_id__in=tenant_ids).select_related("property")
     tenant_payments = Payment.objects.filter(tenant_id__in=tenant_ids).select_related("tenant")
 
@@ -61,6 +70,7 @@ def home(request):
         "payments": Payment.objects.filter(Q(user=request.user) | Q(tenant__in=owner_tenants)).select_related("tenant"),
         "expenses": Expense.objects.filter(user=request.user),
         "services": Service.objects.filter(user=request.user),
+        "approved_maintenance_requests": approved_maintenance_requests,
         "owner_maintenance_requests": owner_maintenance_requests,
         "owner_rent_demands": owner_rent_demands,
         "tenant_records": tenant_records,

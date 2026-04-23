@@ -50,3 +50,19 @@ button {
     padding: 10px;
     border: none;
 }
+
+.request-status {
+    font-weight: 600;
+}
+
+.request-status.approved {
+    color: #1b8a3a;
+}
+
+.request-status.denied {
+    color: #c0392b;
+}
+
+.request-status.pending {
+    color: #9c7b00;
+}

@@ -219,9 +219,13 @@
 <ul>
 {% for s in services %}
 <li>{{ s.property.name }} - {{ s.service_type }} - ₹{{ s.cost }}</li>
-{% empty %}
-<li>No services yet</li>
 {% endfor %}
+{% for req in approved_maintenance_requests %}
+<li>{{ req.property.name }} - {{ req.title }} - <span class="request-status approved">✓ Approved Request</span></li>
+{% endfor %}
+{% if not services and not approved_maintenance_requests %}
+<li>No services yet</li>
+{% endif %}
 </ul>
 </div>
 
@@ -253,7 +257,16 @@
 </form>
 <ul>
 {% for req in tenant_maintenance_requests %}
-<li>{{ req.property.name }} - {{ req.title }} - {{ req.status }}</li>
+<li>
+    {{ req.property.name }} - {{ req.title }} -
+    {% if req.status == 'Approved' %}
+    <span class="request-status approved">✓ Approved</span>
+    {% elif req.status == 'Denied' %}
+    <span class="request-status denied">✕ Denied</span>
+    {% else %}
+    <span class="request-status pending">Pending</span>
+    {% endif %}
+</li>
 {% empty %}
 <li>No requests raised yet</li>
 {% endfor %}
