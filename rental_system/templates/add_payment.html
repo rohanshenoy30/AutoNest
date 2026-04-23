@@ -17,10 +17,12 @@
 <input type="number" name="amount" placeholder="Amount">
 <input type="date" name="date">
 
+{% if is_owner %}
 <select name="status">
 <option>Paid</option>
 <option>Pending</option>
 </select>
+{% endif %}
 
-<button>Add Payment</button>
+<button>{% if is_owner %}Add Payment{% else %}Submit Payment{% endif %}</button>
 </form>

@@ -1,19 +1,64 @@
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.models import User
+from django.db.models import Q
 from .models import *
+
+
+def get_or_create_profile(user):
+    profile, _ = UserProfile.objects.get_or_create(user=user)
+    return profile
+
 
 @login_required
 def home(request):
+    profile = get_or_create_profile(request.user)
+    is_owner = profile.role == UserProfile.ROLE_OWNER
+
+    owner_properties = Property.objects.filter(user=request.user)
+    owner_tenants = Tenant.objects.filter(user=request.user).select_related("property", "tenant_user")
+    owner_maintenance_requests = MaintenanceRequest.objects.filter(owner=request.user).select_related("tenant", "property")
+    owner_rent_demands = RentChangeDemand.objects.filter(owner=request.user).select_related("tenant", "property")
+
+    tenant_records = Tenant.objects.filter(tenant_user=request.user).select_related("property", "user")
+    tenant_ids = tenant_records.values_list("id", flat=True)
+
+    tenant_maintenance_requests = MaintenanceRequest.objects.filter(tenant_id__in=tenant_ids).select_related("property")
+    tenant_rent_demands = RentChangeDemand.objects.filter(tenant_id__in=tenant_ids).select_related("property")
+    tenant_payments = Payment.objects.filter(tenant_id__in=tenant_ids).select_related("tenant")
+
     return render(request, "index.html", {
-        "properties": Property.objects.filter(user=request.user),
-        "tenants": Tenant.objects.filter(user=request.user),
-        "payments": Payment.objects.filter(user=request.user),
+        "profile": profile,
+        "is_owner": is_owner,
+        "properties": owner_properties,
+        "tenants": owner_tenants,
+        "payments": Payment.objects.filter(Q(user=request.user) | Q(tenant__in=owner_tenants)).select_related("tenant"),
         "expenses": Expense.objects.filter(user=request.user),
         "services": Service.objects.filter(user=request.user),
+        "owner_maintenance_requests": owner_maintenance_requests,
+        "owner_rent_demands": owner_rent_demands,
+        "tenant_records": tenant_records,
+        "tenant_maintenance_requests": tenant_maintenance_requests,
+        "tenant_rent_demands": tenant_rent_demands,
+        "tenant_payments": tenant_payments,
     })
+
+
+@login_required
+def set_role(request):
+    role = request.GET.get("role")
+    if role in [UserProfile.ROLE_OWNER, UserProfile.ROLE_TENANT]:
+        profile = get_or_create_profile(request.user)
+        profile.role = role
+        profile.save()
+    return redirect("/")
+
 
 @login_required
 def add_property(request):
+    if get_or_create_profile(request.user).role != UserProfile.ROLE_OWNER:
+        return redirect("/")
+
     if request.method == "POST":
         Property.objects.create(
             user=request.user,
@@ -25,6 +70,9 @@ def add_property(request):
 
 @login_required
 def add_tenant(request):
+    if get_or_create_profile(request.user).role != UserProfile.ROLE_OWNER:
+        return redirect("/")
+
     if request.method == "POST":
         property_id = request.POST.get("property")
         if not property_id:
@@ -33,11 +81,17 @@ def add_tenant(request):
                 "properties": Property.objects.filter(user=request.user),
                 "error": "Please select a property"
             })
+        tenant_user = None
+        tenant_username = request.POST.get("tenant_username", "").strip()
+        if tenant_username:
+            tenant_user = User.objects.filter(username=tenant_username).first()
+
         Tenant.objects.create(
             user=request.user,
+            tenant_user=tenant_user,
             name=request.POST["name"],
             phone=request.POST["phone"],
-            property=Property.objects.get(id=property_id)
+            property=Property.objects.get(id=property_id, user=request.user)
         )
         return redirect("/")
     return render(request, "add_tenant.html", {"properties": Property.objects.filter(user=request.user)})
@@ -45,18 +99,38 @@ def add_tenant(request):
 @login_required
 def add_payment(request):
     if request.method == "POST":
-        Payment.objects.create(
-            user=request.user,
-            tenant=Tenant.objects.get(id=request.POST["tenant"]),
-            amount=request.POST["amount"],
-            date=request.POST["date"],
-            status=request.POST["status"]
-        )
+        profile = get_or_create_profile(request.user)
+        tenant_obj = Tenant.objects.get(id=request.POST["tenant"])
+        if profile.role == UserProfile.ROLE_OWNER and tenant_obj.user == request.user:
+            Payment.objects.create(
+                user=request.user,
+                tenant=tenant_obj,
+                amount=request.POST["amount"],
+                date=request.POST["date"],
+                status=request.POST["status"]
+            )
+        elif profile.role == UserProfile.ROLE_TENANT and tenant_obj.tenant_user == request.user:
+            Payment.objects.create(
+                user=request.user,
+                tenant=tenant_obj,
+                amount=request.POST["amount"],
+                date=request.POST["date"],
+                status="Submitted"
+            )
         return redirect("/")
-    return render(request, "add_payment.html", {"tenants": Tenant.objects.filter(user=request.user)})
+
+    profile = get_or_create_profile(request.user)
+    if profile.role == UserProfile.ROLE_OWNER:
+        tenants = Tenant.objects.filter(user=request.user)
+    else:
+        tenants = Tenant.objects.filter(tenant_user=request.user)
+    return render(request, "add_payment.html", {"tenants": tenants, "is_owner": profile.role == UserProfile.ROLE_OWNER})
 
 @login_required
 def add_expense(request):
+    if get_or_create_profile(request.user).role != UserProfile.ROLE_OWNER:
+        return redirect("/")
+
     if request.method == "POST":
         Expense.objects.create(
             user=request.user,
@@ -70,6 +144,9 @@ def add_expense(request):
 
 @login_required
 def add_service(request):
+    if get_or_create_profile(request.user).role != UserProfile.ROLE_OWNER:
+        return redirect("/")
+
     if request.method == "POST":
         Service.objects.create(
             user=request.user,
@@ -80,3 +157,55 @@ def add_service(request):
         )
         return redirect("/")
     return render(request, "add_service.html", {"properties": Property.objects.filter(user=request.user)})
+
+
+@login_required
+def add_maintenance_request(request):
+    if get_or_create_profile(request.user).role != UserProfile.ROLE_TENANT:
+        return redirect("/")
+
+    if request.method == "POST":
+        tenant = Tenant.objects.get(id=request.POST["tenant"], tenant_user=request.user)
+        MaintenanceRequest.objects.create(
+            tenant=tenant,
+            owner=tenant.user,
+            property=tenant.property,
+            title=request.POST["title"],
+            description=request.POST["description"],
+        )
+    return redirect("/")
+
+
+@login_required
+def update_maintenance_request(request, request_id):
+    if get_or_create_profile(request.user).role != UserProfile.ROLE_OWNER:
+        return redirect("/")
+
+    maintenance_request = MaintenanceRequest.objects.get(id=request_id, owner=request.user)
+    new_status = request.POST.get("status")
+    if new_status in [
+        MaintenanceRequest.STATUS_APPROVED,
+        MaintenanceRequest.STATUS_DENIED,
+        MaintenanceRequest.STATUS_PENDING,
+    ]:
+        maintenance_request.status = new_status
+        maintenance_request.save()
+    return redirect("/")
+
+
+@login_required
+def add_rent_change_demand(request):
+    if get_or_create_profile(request.user).role != UserProfile.ROLE_OWNER:
+        return redirect("/")
+
+    if request.method == "POST":
+        tenant = Tenant.objects.get(id=request.POST["tenant"], user=request.user)
+        RentChangeDemand.objects.create(
+            tenant=tenant,
+            owner=request.user,
+            property=tenant.property,
+            current_rent=request.POST["current_rent"],
+            proposed_rent=request.POST["proposed_rent"],
+            reason=request.POST.get("reason", ""),
+        )
+    return redirect("/")

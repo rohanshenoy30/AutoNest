@@ -18,17 +18,27 @@
 
 <div class="nav">
     {% if user.is_authenticated %}
+    <a href="/set-role/?role=owner">Owner View</a>
+    <a href="/set-role/?role=tenant">Tenant View</a>
+    {% if is_owner %}
     <a href="/add-property/">Add Property</a>
     <a href="/add-tenant/">Add Tenant</a>
-    <a href="/add-payment/">Add Payment</a>
     <a href="/add-expense/">Add Expense</a>
     <a href="/add-service/">Add Service</a>
+    {% else %}
+    <a href="/add-payment/">Pay Rent</a>
+    {% endif %}
     <a href="{% url 'account_logout' %}">Logout</a>
     {% else %}
     <a href="{% url 'account_login' %}">Login</a>
     {% endif %}
 </div>
 
+<div class="card">
+<h2>Current Perspective: {{ profile.role|title }}</h2>
+</div>
+
+{% if is_owner %}
 <div class="card">
 <h2>🏢 Properties</h2>
 <ul>
@@ -41,10 +51,13 @@
 </div>
 
 <div class="card">
-<h2>👤 Tenants</h2>
+<h2>👤 Tenants (Owner Managed)</h2>
 <ul>
 {% for t in tenants %}
-<li>{{ t.name }} ({{ t.property.name }})</li>
+<li>
+    {{ t.name }} ({{ t.property.name }})
+    {% if t.tenant_user %}- Linked account: {{ t.tenant_user.username }}{% endif %}
+</li>
 {% empty %}
 <li>No tenants yet</li>
 {% endfor %}
@@ -52,12 +65,58 @@
 </div>
 
 <div class="card">
-<h2>💰 Payments</h2>
+<h2>💰 Rent Payments</h2>
 <ul>
 {% for pay in payments %}
 <li>{{ pay.tenant.name }} - ₹{{ pay.amount }} - {{ pay.status }}</li>
 {% empty %}
 <li>No payments yet</li>
+{% endfor %}
+</ul>
+</div>
+
+<div class="card">
+<h2>🔧 Tenant Requests</h2>
+<ul>
+{% for req in owner_maintenance_requests %}
+<li>
+    {{ req.tenant.name }} ({{ req.property.name }}) - {{ req.title }} - {{ req.status }}
+    <form method="post" action="/maintenance-request/{{ req.id }}/update/" style="margin-top:8px; width:auto; padding:0; background:transparent;">
+        {% csrf_token %}
+        <select name="status" style="width:auto; display:inline-block;">
+            <option value="Approved">Approved</option>
+            <option value="Denied">Denied</option>
+            <option value="Pending">Pending</option>
+        </select>
+        <button type="submit">Update</button>
+    </form>
+</li>
+{% empty %}
+<li>No tenant requests yet</li>
+{% endfor %}
+</ul>
+</div>
+
+<div class="card">
+<h2>📈 Demand Rent Change</h2>
+<form method="post" action="/add-rent-change-demand/" style="width:100%;">
+    {% csrf_token %}
+    <select name="tenant" required>
+        <option value="">Select tenant</option>
+        {% for t in tenants %}
+        <option value="{{ t.id }}">{{ t.name }} - {{ t.property.name }}</option>
+        {% endfor %}
+    </select>
+    <input type="number" step="0.01" name="current_rent" placeholder="Current rent" required>
+    <input type="number" step="0.01" name="proposed_rent" placeholder="Proposed rent" required>
+    <input type="text" name="reason" placeholder="Reason (optional)">
+    <button type="submit">Create Rent Change Demand</button>
+</form>
+<ul>
+{% for demand in owner_rent_demands %}
+<li>{{ demand.tenant.name }} - ₹{{ demand.current_rent }} → ₹{{ demand.proposed_rent }}</li>
+{% empty %}
+<li>No rent change demands yet</li>
 {% endfor %}
 </ul>
 </div>
@@ -83,6 +142,65 @@
 {% endfor %}
 </ul>
 </div>
+
+{% else %}
+<div class="card">
+<h2>🏠 My Rental Units</h2>
+<ul>
+{% for t in tenant_records %}
+<li>{{ t.property.name }} - Owner: {{ t.user.username }}</li>
+{% empty %}
+<li>No property linked to your tenant account yet</li>
+{% endfor %}
+</ul>
+</div>
+
+<div class="card">
+<h2>📝 Raise Service Request</h2>
+<form method="post" action="/add-maintenance-request/" style="width:100%;">
+    {% csrf_token %}
+    <select name="tenant" required>
+        <option value="">Select your tenancy</option>
+        {% for t in tenant_records %}
+        <option value="{{ t.id }}">{{ t.property.name }}</option>
+        {% endfor %}
+    </select>
+    <input type="text" name="title" placeholder="Request title" required>
+    <input type="text" name="description" placeholder="Describe the issue" required>
+    <button type="submit">Raise Request</button>
+</form>
+<ul>
+{% for req in tenant_maintenance_requests %}
+<li>{{ req.property.name }} - {{ req.title }} - {{ req.status }}</li>
+{% empty %}
+<li>No requests raised yet</li>
+{% endfor %}
+</ul>
+</div>
+
+<div class="card">
+<h2>💰 Pay Rent</h2>
+<a href="/add-payment/">Submit Rent Payment</a>
+<ul>
+{% for pay in tenant_payments %}
+<li>{{ pay.tenant.property.name }} - ₹{{ pay.amount }} - {{ pay.status }}</li>
+{% empty %}
+<li>No rent payments submitted yet</li>
+{% endfor %}
+</ul>
+</div>
+
+<div class="card">
+<h2>📢 Rent Change Demands</h2>
+<ul>
+{% for demand in tenant_rent_demands %}
+<li>{{ demand.property.name }} - ₹{{ demand.current_rent }} → ₹{{ demand.proposed_rent }}</li>
+{% empty %}
+<li>No rent change demands</li>
+{% endfor %}
+</ul>
+</div>
+{% endif %}
 
 </div>
 
