@@ -12,6 +12,8 @@ def get_or_create_profile(user):
 
 @login_required
 def home(request):
+    from django.db.models import Sum
+    
     profile = get_or_create_profile(request.user)
     is_owner = profile.role == UserProfile.ROLE_OWNER
 
@@ -27,6 +29,30 @@ def home(request):
     tenant_rent_demands = RentChangeDemand.objects.filter(tenant_id__in=tenant_ids).select_related("property")
     tenant_payments = Payment.objects.filter(tenant_id__in=tenant_ids).select_related("tenant")
 
+    # Calculate profit per property for owner
+    property_profits = []
+    for prop in owner_properties:
+        # Get all tenants for this property
+        property_tenants = Tenant.objects.filter(property=prop)
+        tenant_ids_for_prop = property_tenants.values_list("id", flat=True)
+        
+        # Calculate total rent paid
+        total_rent = Payment.objects.filter(tenant_id__in=tenant_ids_for_prop).aggregate(Sum("amount"))["amount__sum"] or 0
+        
+        # Calculate total expenses
+        total_expenses = Expense.objects.filter(property=prop).aggregate(Sum("amount"))["amount__sum"] or 0
+        
+        # Calculate total services
+        total_services = Service.objects.filter(property=prop).aggregate(Sum("cost"))["cost__sum"] or 0
+        
+        # Calculate profit
+        profit = total_rent - total_expenses - total_services
+        
+        property_profits.append({
+            "name": prop.name,
+            "profit": profit
+        })
+
     return render(request, "index.html", {
         "profile": profile,
         "is_owner": is_owner,
@@ -41,6 +67,7 @@ def home(request):
         "tenant_maintenance_requests": tenant_maintenance_requests,
         "tenant_rent_demands": tenant_rent_demands,
         "tenant_payments": tenant_payments,
+        "property_profits": property_profits,
     })
 
 

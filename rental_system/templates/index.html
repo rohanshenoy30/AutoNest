@@ -4,6 +4,7 @@
 <head>
     <title>Dashboard</title>
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
 </head>
 
 <body>
@@ -49,6 +50,87 @@
 {% endfor %}
 </ul>
 </div>
+
+{% if properties %}
+<div class="card">
+<h2>📊 Profit by Property</h2>
+<div style="position: relative; height: 400px;">
+    <canvas id="profitChart"></canvas>
+</div>
+{{ property_profits|json_script:"profitData" }}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        try {
+            const dataElement = document.getElementById('profitData');
+            if (!dataElement) {
+                console.error('profitData element not found');
+                return;
+            }
+            
+            const profitData = JSON.parse(dataElement.textContent);
+            console.log('Parsed profitData:', profitData);
+            console.log('Type:', typeof profitData);
+            console.log('Is array:', Array.isArray(profitData));
+            
+            if (!profitData || !Array.isArray(profitData) || profitData.length === 0) {
+                console.log('No properties with profit data');
+                return;
+            }
+            
+            const labels = profitData.map(item => item.name);
+            const profits = profitData.map(item => item.profit);
+            
+            console.log('Labels:', labels);
+            console.log('Profits:', profits);
+            
+            // Determine colors: green for positive profit, red for negative
+            const colors = profits.map(profit => profit >= 0 ? '#4CAF50' : '#F44336');
+            
+            const chartElement = document.getElementById('profitChart');
+            const ctx = chartElement.getContext('2d');
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Profit (₹)',
+                        data: profits,
+                        backgroundColor: colors,
+                        borderColor: colors,
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Profit (₹)'
+                            },
+                            grid: {
+                                color: (context) => context.tick.value === 0 ? '#000000' : '#e0e0e0',
+                                lineWidth: (context) => context.tick.value === 0 ? 3 : 1
+                            }
+                        }
+                    }
+                }
+            });
+        } catch (error) {
+            console.error('Error rendering chart:', error);
+        }
+    });
+</script>
+</div>
+{% endif %}
 
 <div class="card">
 <h2>👤 Tenants (Owner Managed)</h2>
